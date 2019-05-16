@@ -14,6 +14,16 @@
           </h4>
           <div class="settings-block-main">
             <div class="settings-group">
+              <label class="settings-label">root element selector</label>
+              <input id="options-code-root" type="text" v-model="options.code.rootSelector" @change="save" placeholder="">
+              <small>like 'body'</small>
+            </div>
+            <div class="settings-group">
+              <label class="settings-label">ignore id prefix</label>
+              <input id="options-code-ignoreID" type="text" v-model="options.code.ignoreId" @change="save" placeholder="">
+              <small>like 'ember'</small>
+            </div>
+            <div class="settings-group">
               <label class="settings-label">custom data attribute</label>
               <input id="options-code-dataAttribute" type="text" v-model="options.code.dataAttribute" @change="save" placeholder="your custom data-* attribute">
               <small>Define a <code>data-*</code> attribute that we'll attempt to use when selecting the elements. This is handy

@@ -6,6 +6,8 @@ class EventRecorder {
     this.eventLog = []
     this.previousEvent = null
     this.dataAttribute = null
+    this.ignoreId = null
+    this.rootSelector  = null
     this.isTopFrame = (window.location === window.parent.location)
   }
 
@@ -13,9 +15,15 @@ class EventRecorder {
     // We need to check the existence of chrome for testing purposes
     if (chrome.storage && chrome.storage.local) {
       chrome.storage.local.get(['options'], ({options}) => {
-        const { dataAttribute } = options ? options.code : {}
+        const { dataAttribute, ignoreId, rootSelector } = options ? options.code : {}
         if (dataAttribute) {
           this.dataAttribute = dataAttribute
+        }
+        if (ignoreId) {
+            this.ignoreId = ignoreId
+        }
+        if (rootSelector) {
+            this.rootSelector = rootSelector
         }
         this._initializeRecorder()
       })
@@ -68,13 +76,17 @@ class EventRecorder {
   recordEvent (e) {
     if (this.previousEvent && this.previousEvent.timeStamp === e.timeStamp) return
     this.previousEvent = e
-
+    const finderOpts = { seedMinLength: 5, optimizedMinLength: 10 }
+    if (this.ignoreId) {
+        finderOpts.idName = (id) => !id.startsWith(this.ignoreId)
+    }
+    if (this.rootSelector) {
+        finderOpts.root = document.querySelector(this.rootSelector)
+    }
     // we explicitly catch any errors and swallow them, as none node-type events are also ingested.
     // for these events we cannot generate selectors, which is OK
     try {
-      const selector = this.dataAttribute && e.target.hasAttribute && e.target.hasAttribute(this.dataAttribute)
-        ? formatDataSelector(e.target, this.dataAttribute)
-        : finder(e.target, {seedMinLength: 5, optimizedMinLength: 10})
+      const selector =  finderWithAttribute(e.target, finderOpts, this.dataAttribute)
 
       const msg = {
         selector: selector,
@@ -86,7 +98,7 @@ class EventRecorder {
         coordinates: getCoordinates(e)
       }
       this.sendMessage(msg)
-    } catch (e) {}
+    } catch (e) { }
   }
 
   getEventLog () {
@@ -108,8 +120,32 @@ function getCoordinates (evt) {
   return eventsWithCoordinates[evt.type] ? { x: evt.clientX, y: evt.clientY } : null
 }
 
-function formatDataSelector (element, attribute) {
-  return `[${attribute}="${element.getAttribute(attribute)}"]`
+function formatDataSelector (element, attribute, originalSelector) {
+  let selector = `[${attribute}="${element.getAttribute(attribute)}"]`
+  let nthChild;
+  if (nthChild = originalSelector.match(/\:nth\-child\(\d+\)/)) {
+    selector += nthChild
+  }
+  return selector
+}
+
+function finderWithAttribute(element, findOpts, attribute) {
+    let selectors = finder(element, findOpts)
+    let root = document.body
+    selectors = selectors.split(/\s+/).reduce((paths, selectorFrag) => {
+        if (selectorFrag !== '>') {
+            const node = root.querySelector(selectorFrag)
+            if (node) {
+                if (node.hasAttribute(attribute)) {
+                    selectorFrag = formatDataSelector(node, attribute, selectorFrag)
+                }
+                root = node
+            }
+        }
+        paths.push(selectorFrag)
+        return paths
+    }, []).join(' ')
+    return selectors
 }
 
 window.eventRecorder = new EventRecorder()

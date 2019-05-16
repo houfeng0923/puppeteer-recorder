@@ -22,7 +22,9 @@ export const defaults = {
   waitForNavigation: true,
   waitForSelectorOnClick: true,
   blankLinesBetweenBlocks: true,
-  dataAttribute: ''
+  dataAttribute: '',
+  ignoreId: null,
+  rootSelector: 'body'
 }
 
 export default class CodeGenerator {
