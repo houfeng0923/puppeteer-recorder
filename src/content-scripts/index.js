@@ -129,10 +129,15 @@ function formatDataSelector (element, attribute, originalSelector) {
   return selector
 }
 
+function hasParent(parents, element) {
+  return !!Array.from(parents).find((parent) => parent.contains(element))
+}
+
 function finderWithAttribute(element, findOpts, attribute) {
     let selectors = finder(element, findOpts)
     let root = document.body
     selectors = selectors.split(/\s+/).reduce((paths, selectorFrag) => {
+        let originFrag = selectorFrag
         if (selectorFrag !== '>') {
             const node = root.querySelector(selectorFrag)
             if (node) {
@@ -143,6 +148,9 @@ function finderWithAttribute(element, findOpts, attribute) {
             }
         }
         paths.push(selectorFrag)
+        if (!hasParent(root.querySelectorAll(paths.join(' '), element))) {
+          paths[paths.length - 1] = originFrag
+        }
         return paths
     }, []).join(' ')
     return selectors
